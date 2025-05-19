@@ -1,11 +1,11 @@
 import express, { response } from "express";
+import { routes } from "./routes";
 
 const app = express();
 
-app.get("/", (request, response) => {
-  response.send("Hello Express + TypeScript");
-});
+app.use(routes);
 
 app.listen(4000, () => {
+  // biome-ignore lint/style/noUnusedTemplateLiteral: <explanation>
   console.log(`🚀 App is running at port 4000! `);
 });
