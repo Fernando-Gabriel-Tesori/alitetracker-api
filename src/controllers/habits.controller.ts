@@ -2,14 +2,13 @@ import type { Request, Response } from "express";
 import { habitModel } from "../model/habit.model";
 
 export class HabitsController {
-  store = async (
-    req: Request,
-    res: Response,
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  ): Promise<Response<any, Record<string, any>>> => {
+  /**
+   * Cria um novo hábito, se ainda não existir.
+   */
+  async store(req: Request, res: Response): Promise<Response> {
     const { name } = req.body;
 
-    // Validação básica
+    // Validação do campo "name"
     if (!name || typeof name !== "string") {
       return res
         .status(400)
@@ -17,6 +16,16 @@ export class HabitsController {
     }
 
     try {
+      // Verifica se o hábito já existe
+      const existingHabit = await habitModel.findOne({ name });
+
+      if (existingHabit) {
+        return res
+          .status(409)
+          .json({ error: "Já existe um hábito com esse nome." });
+      }
+
+      // Criação do novo hábito
       const newHabit = await habitModel.create({
         name,
         completedDates: [],
@@ -25,7 +34,9 @@ export class HabitsController {
       return res.status(201).json(newHabit);
     } catch (error) {
       console.error("Erro ao criar hábito:", error);
-      return res.status(500).json({ error: "Erro interno ao criar o hábito." });
+      return res
+        .status(500)
+        .json({ error: "Erro interno ao tentar criar o hábito." });
     }
-  };
+  }
 }
