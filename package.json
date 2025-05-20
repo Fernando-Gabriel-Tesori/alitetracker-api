@@ -7,7 +7,12 @@
     "format": "biome format . --write",
     "lint": "biome lint ."
   },
-  "keywords": ["api", "express", "typescript", "elite-tracker"],
+  "keywords": [
+    "api",
+    "express",
+    "typescript",
+    "elite-tracker"
+  ],
   "author": {
     "name": "Fernando Tesori",
     "url": "https://github.com/Fernando-Gabriel-Tesori"
@@ -24,6 +29,8 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "mongoose": "^8.15.0",
+    "mongose": "^0.0.2-security"
   }
 }
