@@ -7,8 +7,11 @@ export async function setupMongo(): Promise<void> {
     }
 
     console.log("🎲 connecting to database...");
-    await mongoose.connect("mongodb://localhost:27017/elitetracker");
+    await mongoose.connect("mongodb://localhost:27017/elitetracker", {
+      connectTimeoutMS: 300,
+    });
+    console.log("✅ Database connected!");
   } catch {
-    console.error("❌ Database not connected.");
+    throw new Error("❌ Database not connected.");
   }
 }
