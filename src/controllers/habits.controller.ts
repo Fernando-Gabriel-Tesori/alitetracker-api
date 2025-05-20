@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { habitModel } from "../model/habit.model";
+import { buildValidationErrorMessage } from "../utils/build-validation-error-message.util";
 
 export class HabitsController {
   /**
@@ -10,26 +11,28 @@ export class HabitsController {
     // Schema de validação com Zod
     const schema = z.object({
       name: z.string().min(1, "O nome do hábito é obrigatório"),
+      // Caso futuramente queira validar outros campos, adicione aqui
     });
 
-    // Corrigido: usar `req.body` ao invés de `request.body`
-    const parseResult = schema.safeParse(req.body);
+    // Extrai os dados do corpo da requisição
+    const habit = schema.safeParse(req.body);
 
     // Se a validação falhar, retorna erro
-    if (!parseResult.success) {
-      return res.status(400).json({
+    if (!habit.success) {
+      const errors = buildValidationErrorMessage(habit.error.issues);
+      return res.status(422).json({
         message: "Erro na validação",
-        issues: parseResult.error.format(),
+        issues: habit.error.format(),
       });
     }
 
-    const { name } = parseResult.data;
+    const { name } = habit.data;
 
     try {
       // Verifica se o hábito já existe
-      const existingHabit = await habitModel.findOne({ name });
+      const findHabit = await habitModel.findOne({ name });
 
-      if (existingHabit) {
+      if (findHabit) {
         return res
           .status(409)
           .json({ error: "Já existe um hábito com esse nome." });
@@ -44,9 +47,9 @@ export class HabitsController {
       return res.status(201).json(newHabit);
     } catch (error) {
       console.error("Erro ao criar hábito:", error);
-      return res
-        .status(500)
-        .json({ error: "Erro interno ao tentar criar o hábito." });
+      return res.status(500).json({
+        error: "Erro interno ao tentar criar o hábito.",
+      });
     }
   }
 }
