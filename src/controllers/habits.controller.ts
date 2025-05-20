@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import { habitModel } from "../model/habit.model";
 
 export class HabitsController {
@@ -6,14 +7,23 @@ export class HabitsController {
    * Cria um novo hábito, se ainda não existir.
    */
   async store(req: Request, res: Response): Promise<Response> {
-    const { name } = req.body;
+    // Schema de validação com Zod
+    const schema = z.object({
+      name: z.string().min(1, "O nome do hábito é obrigatório"),
+    });
 
-    // Validação do campo "name"
-    if (!name || typeof name !== "string") {
-      return res
-        .status(400)
-        .json({ error: "O campo 'name' é obrigatório e deve ser uma string." });
+    // Corrigido: usar `req.body` ao invés de `request.body`
+    const parseResult = schema.safeParse(req.body);
+
+    // Se a validação falhar, retorna erro
+    if (!parseResult.success) {
+      return res.status(400).json({
+        message: "Erro na validação",
+        issues: parseResult.error.format(),
+      });
     }
+
+    const { name } = parseResult.data;
 
     try {
       // Verifica se o hábito já existe
