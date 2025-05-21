@@ -29,6 +29,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "dayjs": "^1.11.13",
     "express": "^5.1.0",
     "mongoose": "^8.15.0",
     "mongose": "^0.0.2-security",

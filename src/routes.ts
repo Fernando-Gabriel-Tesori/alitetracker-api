@@ -28,4 +28,9 @@ routes.post("/habits", habitsController.store.bind(habitsController));
  */
 routes.delete("/habits/:id", habitsController.remove.bind(habitsController));
 
+/**
+ * Rota para desmarcar e marcar tarefa ou habito
+ */
+routes.patch("/habits/:id/toggle", habitsController.toggle);
+
 export { routes };

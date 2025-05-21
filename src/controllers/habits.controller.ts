@@ -3,6 +3,7 @@ import { z } from "zod";
 import { habitModel } from "../model/habit.model";
 import { buildValidationErrorMessage } from "../utils/build-validation-error-message.util";
 import { Types } from "mongoose";
+import dayjs from "dayjs";
 export class HabitsController {
   /**
    * Cria um novo hábito, se ainda não existir.
@@ -103,6 +104,47 @@ export class HabitsController {
       console.error("Erro ao deletar hábito:", error);
       return res.status(500).json({
         error: "Erro interno ao tentar deletar o hábito.",
+      });
+    }
+  }
+
+  async toggle(req: Request, res: Response): Promise<Response> {
+    const schema = z.object({
+      id: z
+        .string()
+        .min(1, "ID é obrigatório")
+        .refine((val) => Types.ObjectId.isValid(val), {
+          message: "ID inválido",
+        }),
+    });
+
+    const parsed = schema.safeParse(req.params);
+    if (!parsed.success) {
+      return res.status(422).json({
+        message: "Erro na validação do parâmetro",
+        issues: parsed.error.format(),
+      });
+    }
+
+    try {
+      // Busca o hábito pelo ID
+      const habit = await habitModel.findById(parsed.data.id);
+      if (!habit) {
+        return res.status(404).json({ error: "Hábito não encontrado." });
+      }
+
+      // Salva a alteração
+      await habit.save();
+
+      // Exemplo: incluir data do "hoje"
+      const now = dayjs().startOf("day").toISOString();
+
+      // Retorna o hábito atualizado e a data atual
+      return res.status(200).json({ habit, now });
+    } catch (error) {
+      console.error("Erro ao alternar hábito:", error);
+      return res.status(500).json({
+        error: "Erro interno ao tentar alternar o hábito.",
       });
     }
   }
