@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { habitModel } from "../model/habit.model";
 import { buildValidationErrorMessage } from "../utils/build-validation-error-message.util";
-
+import { Types } from "mongoose";
 export class HabitsController {
   /**
    * Cria um novo hábito, se ainda não existir.
@@ -55,6 +55,7 @@ export class HabitsController {
   /**
    * Lista todos os hábitos ordenados por nome.
    */
+
   async index(req: Request, res: Response): Promise<Response> {
     try {
       const habits = await habitModel.find().sort({ name: 1 });
@@ -73,9 +74,13 @@ export class HabitsController {
   async remove(req: Request, res: Response): Promise<Response> {
     // Schema para validar o parâmetro id da rota
     const schema = z.object({
-      id: z.string().min(1, "ID é obrigatório"),
+      id: z
+        .string()
+        .min(1, "ID é obrigatório")
+        .refine((val) => Types.ObjectId.isValid(val), {
+          message: "ID inválido",
+        }),
     });
-
     const parsed = schema.safeParse(req.params);
 
     if (!parsed.success) {
@@ -88,12 +93,12 @@ export class HabitsController {
     try {
       // DeleteOne espera filtro pelo campo correto do Mongo, geralmente _id
       const result = await habitModel.deleteOne({ _id: parsed.data.id });
-
       if (result.deletedCount === 0) {
         return res.status(404).json({ error: "Hábito não encontrado." });
       }
 
-      return res.status(204).send();
+      // Retorna confirmação explícita ao invés de 204 vazio
+      return res.status(200).json({ message: "Hábito deletado com sucesso." });
     } catch (error) {
       console.error("Erro ao deletar hábito:", error);
       return res.status(500).json({
