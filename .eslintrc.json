@@ -1,0 +1,26 @@
+{
+  "root": true,
+  "env": { "browser": true, "es2020": true },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:prettier/recommended"
+  ],
+  "ignorePatterns": ["dist"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["react-refresh", "prettier", "eslint-plugin-import-helpers"],
+  "rules": {
+    "rules": {
+      "prettier/prettier": ["error", { "endOfLine": "auto" }]
+    },
+    "import-helpers/order-imports": [
+      "warn",
+      {
+        "newlinesBetween": "always",
+        "groups": ["module", "/^node/", ["parent", "sibling", "index"]],
+        "alphabetize": { "": "asc", "ignoreCase": true }
+      }
+    ]
+  }
+}

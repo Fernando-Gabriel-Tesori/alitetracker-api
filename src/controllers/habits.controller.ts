@@ -1,151 +1,193 @@
-import type { Request, Response } from "express";
-import { z } from "zod";
-import { habitModel } from "../model/habit.model";
-import { buildValidationErrorMessage } from "../utils/build-validation-error-message.util";
-import { Types } from "mongoose";
-import dayjs from "dayjs";
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { habitModel } from '../models/habit.model';
+import { buildValidationErrorMessage } from '../utils/build-validation-error-message-util';
+import dayjs from 'dayjs';
+import mongoose from 'mongoose';
+
 export class HabitsController {
-  /**
-   * Cria um novo hábito, se ainda não existir.
-   */
-  async store(req: Request, res: Response): Promise<Response> {
-    // Schema de validação com Zod
+  store = async (request: Request, response: Response): Promise<Response> => {
     const schema = z.object({
-      name: z.string().min(1, "O nome do hábito é obrigatório"),
+      name: z.string(),
     });
 
-    // Validação dos dados recebidos
-    const parsed = schema.safeParse(req.body);
+    const habit = schema.safeParse(request.body);
 
-    if (!parsed.success) {
-      // Em caso de erro de validação, retorna 422 com detalhes
-      const errors = buildValidationErrorMessage(parsed.error.issues);
-      return res.status(422).json({
-        message: "Erro na validação",
-        issues: parsed.error.format(),
-      });
+    if (!habit.success) {
+      const errors = buildValidationErrorMessage(habit.error.issues);
+
+      return response.status(400).json({ message: errors });
     }
 
-    const { name } = parsed.data;
-
-    try {
-      // Verifica se já existe um hábito com esse nome
-      const existingHabit = await habitModel.findOne({ name });
-
-      if (existingHabit) {
-        return res
-          .status(409)
-          .json({ error: "Já existe um hábito com esse nome." });
-      }
-
-      // Cria e salva o novo hábito
-      const newHabit = await habitModel.create({
-        name,
-        completedDates: [],
-      });
-
-      return res.status(201).json(newHabit);
-    } catch (error) {
-      console.error("Erro ao criar hábito:", error);
-      return res.status(500).json({
-        error: "Erro interno ao tentar criar o hábito.",
-      });
-    }
-  }
-
-  /**
-   * Lista todos os hábitos ordenados por nome.
-   */
-
-  async index(req: Request, res: Response): Promise<Response> {
-    try {
-      const habits = await habitModel.find().sort({ name: 1 });
-      return res.status(200).json(habits);
-    } catch (error) {
-      console.error("Erro ao listar hábitos:", error);
-      return res.status(500).json({
-        error: "Erro interno ao tentar listar os hábitos.",
-      });
-    }
-  }
-
-  /**
-   * Remove um hábito pelo id.
-   */
-  async remove(req: Request, res: Response): Promise<Response> {
-    // Schema para validar o parâmetro id da rota
-    const schema = z.object({
-      id: z
-        .string()
-        .min(1, "ID é obrigatório")
-        .refine((val) => Types.ObjectId.isValid(val), {
-          message: "ID inválido",
-        }),
-    });
-    const parsed = schema.safeParse(req.params);
-
-    if (!parsed.success) {
-      return res.status(422).json({
-        message: "Erro na validação do parâmetro",
-        issues: parsed.error.format(),
-      });
-    }
-
-    try {
-      // DeleteOne espera filtro pelo campo correto do Mongo, geralmente _id
-      const result = await habitModel.deleteOne({ _id: parsed.data.id });
-      if (result.deletedCount === 0) {
-        return res.status(404).json({ error: "Hábito não encontrado." });
-      }
-
-      // Retorna confirmação explícita ao invés de 204 vazio
-      return res.status(200).json({ message: "Hábito deletado com sucesso." });
-    } catch (error) {
-      console.error("Erro ao deletar hábito:", error);
-      return res.status(500).json({
-        error: "Erro interno ao tentar deletar o hábito.",
-      });
-    }
-  }
-
-  async toggle(req: Request, res: Response): Promise<Response> {
-    const schema = z.object({
-      id: z
-        .string()
-        .min(1, "ID é obrigatório")
-        .refine((val) => Types.ObjectId.isValid(val), {
-          message: "ID inválido",
-        }),
+    const findHabit = await habitModel.findOne({
+      name: habit.data.name,
     });
 
-    const parsed = schema.safeParse(req.params);
-    if (!parsed.success) {
-      return res.status(422).json({
-        message: "Erro na validação do parâmetro",
-        issues: parsed.error.format(),
-      });
+    if (findHabit) {
+      return response.status(422).json({ message: 'Habit already exists.' });
     }
 
-    try {
-      // Busca o hábito pelo ID
-      const habit = await habitModel.findById(parsed.data.id);
-      if (!habit) {
-        return res.status(404).json({ error: "Hábito não encontrado." });
-      }
+    const newHabit = await habitModel.create({
+      name: habit.data.name,
+      completedDates: [],
+      userId: request.user.id,
+    });
 
-      // Salva a alteração
-      await habit.save();
+    return response.status(201).json(newHabit);
+  };
 
-      // Exemplo: incluir data do "hoje"
-      const now = dayjs().startOf("day").toISOString();
+  index = async (request: Request, response: Response) => {
+    const habits = await habitModel
+      .find({
+        userId: request.user.id,
+      })
+      .sort({ name: 1 });
 
-      // Retorna o hábito atualizado e a data atual
-      return res.status(200).json({ habit, now });
-    } catch (error) {
-      console.error("Erro ao alternar hábito:", error);
-      return res.status(500).json({
-        error: "Erro interno ao tentar alternar o hábito.",
-      });
+    response.status(200).json(habits);
+  };
+
+  remove = async (request: Request, response: Response) => {
+    const schema = z.object({
+      id: z.string(),
+    });
+
+    const habit = schema.safeParse(request.params);
+
+    if (!habit.success) {
+      const errors = buildValidationErrorMessage(habit.error.issues);
+
+      return response.status(422).json({ message: errors });
     }
-  }
+
+    const findHabit = await habitModel.findOne({
+      _id: habit.data.id,
+      userId: request.user.id,
+    });
+
+    if (!findHabit) {
+      return response.status(404).json({ message: 'Habti not found.' });
+    }
+
+    await habitModel.deleteOne({
+      _id: habit.data.id,
+    });
+
+    return response.status(204).send();
+  };
+
+  toggle = async (request: Request, response: Response) => {
+    const schema = z.object({
+      id: z.string(),
+    });
+
+    const validated = schema.safeParse(request.params);
+
+    if (!validated.success) {
+      const errors = buildValidationErrorMessage(validated.error.issues);
+
+      return response.status(422).json({ message: errors });
+    }
+
+    const findHabit = await habitModel.findOne({
+      _id: validated.data.id,
+      userId: request.user.id,
+    });
+
+    if (!findHabit) {
+      return response.status(404).json({ message: 'Habti not found.' });
+    }
+
+    const now = dayjs().startOf('day').toISOString();
+
+    const isHabitCompletedOnDate = findHabit
+      .toObject()
+      ?.completedDates.find(
+        (item) => dayjs(String(item)).toISOString() === now,
+      );
+
+    if (isHabitCompletedOnDate) {
+      const habitUpdated = await habitModel.findByIdAndUpdate(
+        {
+          _id: validated.data.id,
+        },
+        {
+          $pull: {
+            completedDates: now,
+          },
+        },
+        {
+          returnDocument: 'after',
+        },
+      );
+
+      return response.status(200).json(habitUpdated);
+    }
+
+    const habitUpdated = await habitModel.findByIdAndUpdate(
+      {
+        _id: validated.data.id,
+      },
+      {
+        $push: {
+          completedDates: now,
+        },
+      },
+      {
+        returnDocument: 'after',
+      },
+    );
+
+    return response.status(200).json(habitUpdated);
+  };
+
+  metrics = async (request: Request, response: Response) => {
+    const schema = z.object({
+      id: z.string(),
+      date: z.coerce.date(),
+    });
+
+    const validated = schema.safeParse({ ...request.params, ...request.query });
+
+    if (!validated.success) {
+      const errors = buildValidationErrorMessage(validated.error.issues);
+
+      return response.status(422).json({ message: errors });
+    }
+
+    const dateFrom = dayjs(validated.data.date).startOf('month');
+    const dateTo = dayjs(validated.data.date).endOf('month');
+
+    const [habitMetrics] = await habitModel
+      .aggregate()
+      .match({
+        _id: new mongoose.Types.ObjectId(validated.data.id),
+        userId: request.user.id,
+      })
+      .project({
+        _id: 1,
+        name: 1,
+        completedDates: {
+          $filter: {
+            input: '$completedDates',
+            as: 'completedDate',
+            cond: {
+              $and: [
+                {
+                  $gte: ['$$completedDate', dateFrom.toDate()],
+                },
+                {
+                  $lte: ['$$completedDate', dateTo.toDate()],
+                },
+              ],
+            },
+          },
+        },
+      });
+
+    if (!habitMetrics) {
+      return response.status(404).json({ message: 'Habti not found.' });
+    }
+
+    return response.status(200).json(habitMetrics);
+  };
 }

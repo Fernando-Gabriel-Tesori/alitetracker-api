@@ -1,36 +1,40 @@
-import { Router } from "express";
-import packageJson from "../package.json";
-import { HabitsController } from "./controllers/habits.controller";
+import { Request, Response, Router } from 'express';
+import packageJson from '../package.json';
+import { HabitsController } from './controllers/habits.controller';
+import { FocusTimeController } from './controllers/focus-time.controller';
+import { AuthController } from './controllers/auth.controller';
+import { authMiddleware } from './middleware/auth.middleware';
 
-const routes = Router();
+export const routes = Router();
+
 const habitsController = new HabitsController();
+const focusTimeController = new FocusTimeController();
+const authController = new AuthController();
 
-/**
- * Rota principal que retorna informações do package.json
- */
-routes.get("/", (req, res) => {
+routes.get('/', (request: Request, response: Response) => {
   const { name, description, version } = packageJson;
-  return res.status(200).json({ name, description, version });
+
+  response.status(200).json({ name, description, version });
 });
 
-/**
- * Rota para listar todos os hábitos
- */
-routes.get("/habits", habitsController.index.bind(habitsController));
+routes.get('/auth', authController.auth);
 
-/**
- * Rota para criar um novo hábito
- */
-routes.post("/habits", habitsController.store.bind(habitsController));
+routes.get('/auth/callback', authController.authCallback);
 
-/**
- * Rota para deletar um hábito pelo ID
- */
-routes.delete("/habits/:id", habitsController.remove.bind(habitsController));
+routes.use(authMiddleware);
 
-/**
- * Rota para desmarcar e marcar tarefa ou habito
- */
-routes.patch("/habits/:id/toggle", habitsController.toggle);
+routes.get('/habits', habitsController.index);
 
-export { routes };
+routes.get('/habits/:id/metrics', habitsController.metrics);
+
+routes.post('/habits', habitsController.store);
+
+routes.delete('/habits/:id', habitsController.remove);
+
+routes.patch('/habits/:id/toggle', habitsController.toggle);
+
+routes.post('/focus-time', focusTimeController.store);
+
+routes.get('/focus-time', focusTimeController.index);
+
+routes.get('/focus-time/metrics', focusTimeController.metricsByMonth);
