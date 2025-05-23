@@ -7,7 +7,12 @@
 		"format": "biome format . --write",
 		"lint": "biome lint ."
 	},
-	"keywords": ["api", "express", "typescript", "elite-tracker"],
+	"keywords": [
+		"api",
+		"express",
+		"typescript",
+		"elite-tracker"
+	],
 	"author": {
 		"name": "Fernando Tesori",
 		"url": "https://github.com/Fernando-Gabriel-Tesori"
@@ -24,6 +29,7 @@
 		"eslint-plugin-import-helpers": "^2.0.1",
 		"eslint-plugin-prettier": "^5.2.1",
 		"globals": "^15.14.0",
+		"ts-node-dev": "^2.0.0",
 		"tsx": "^4.19.2",
 		"typescript": "^5.7.3",
 		"typescript-eslint": "^8.18.2"
